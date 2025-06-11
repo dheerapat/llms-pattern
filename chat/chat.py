@@ -11,12 +11,14 @@ client = OpenAI(
 )
 
 
-def main():
+def chat_loop():
     print("type 'exit' to exit the app")
     chat = []
     while True:
+        # print(chat)
         user_input = typer.prompt("user")
         if user_input.lower() == "exit":
+            print("Bye!")
             break
         chat.append({"role": "user", "content": user_input})
         completion = client.chat.completions.create(
@@ -26,8 +28,7 @@ def main():
         chat.append(
             {"role": "assistant", "content": completion.choices[0].message.content}
         )
-    # print(chat)
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    typer.run(chat_loop)

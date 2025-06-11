@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 class MultipleChoiceQuestionFormat(BaseModel):
     question: str
@@ -24,7 +26,6 @@ class MultipleChoiceQuestionFormat(BaseModel):
 
 
 def make_request(instruction: str):
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     response = client.beta.chat.completions.parse(
         model="gpt-4.1-nano-2025-04-14",
@@ -36,6 +37,7 @@ def make_request(instruction: str):
             {"role": "user", "content": instruction},
         ],
         response_format=MultipleChoiceQuestionFormat,
+        temperature=0.2,
     )
 
     return response.choices[0].message.content
