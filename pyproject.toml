@@ -1,0 +1,12 @@
+[project]
+name = "llm-demo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "black>=25.1.0",
+    "openai>=1.85.0",
+    "python-dotenv>=1.1.0",
+    "typer>=0.16.0",
+]
