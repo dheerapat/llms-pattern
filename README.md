@@ -14,20 +14,26 @@ This project demonstrates several common LLM use cases:
 ## Getting Started
 
 1. **Clone the repository:**
+
 ```bash
 git clone git@github.com:dheerapat/llm-demo.git
 cd llm-demo
 ```
+
 2. **Create a `.env` file:**
+
 Copy the contents of `.env.example` to a new file named `.env` and fill in your OpenAI API key.
+
 ```
 LLM_API_KEY=sk-...
 BASE_URL=https://api.openai.com/v1
 MODEL_NAME=gpt-4.1-nano-2025-04-14 
 ```
+
 Replace `sk-...` with your actual OpenAI API key. You can also customize the `BASE_URL` and `MODEL_NAME` if needed.
 
 3. **Install dependencies:**
+
 ```bash
 uv sync
 ```
