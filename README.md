@@ -8,7 +8,7 @@ This project demonstrates several common LLM use cases:
 
 * **Chat:** A simple interactive chat application using the OpenAI Chat Completions API.
 * **Multimodality:** Demonstrates how to send images to the LLM along with text prompts (using the OpenAI Chat Completions API).
-* **Structured Output:** Shows how to use Pydantic models to define a desired output format and instruct the LLM to respond in that structured way (using OpenAI's function calling ability).
+* **Structured Output:** Shows how to use Pydantic models to define a desired output format and instruct the LLM to respond in that structured way.
 * More use cases on the way
 
 ## Getting Started
