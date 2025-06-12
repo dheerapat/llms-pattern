@@ -1,4 +1,4 @@
-# LLM Demo
+# LLMs Pattern
 
 This repository showcases example patterns for several AI use cases, implemented using only the OpenAI SDK. It aims to provide a simple and practical starting point for building applications leveraging Large Language Models (LLMs).  No other frameworks are used to keep the examples clean and focused.
 
