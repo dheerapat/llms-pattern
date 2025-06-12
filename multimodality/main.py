@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(
+    base_url=os.getenv("BASE_URL"),
+    api_key=os.getenv("LLM_API_KEY"),
+)
 
 
 def encode_image(image_path):
@@ -18,7 +21,7 @@ def main(img: str):
     img_path = os.path.join(current_directory, "img", img)
     base64_image = encode_image(img_path)
     completion = client.chat.completions.create(
-        model="gpt-4.1-nano-2025-04-14",
+        model=os.getenv("MODEL_NAME", ""),
         messages=[
             {
                 "role": "user",

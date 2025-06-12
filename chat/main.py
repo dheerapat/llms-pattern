@@ -5,13 +5,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
+    base_url=os.getenv("BASE_URL"),
+    api_key=os.getenv("LLM_API_KEY"),
 )
 
 
 def main():
     completion = client.chat.completions.create(
-        model="gpt-4.1-nano-2025-04-14",
+        model=os.getenv("MODEL_NAME", ""),
         messages=[
             {"role": "user", "content": "I'm pickle Rick!"},
         ],

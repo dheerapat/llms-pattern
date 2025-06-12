@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
+    base_url=os.getenv("BASE_URL"),
+    api_key=os.getenv("LLM_API_KEY"),
 )
 
 
@@ -22,7 +23,7 @@ def chat_loop():
             break
         chat.append({"role": "user", "content": user_input})
         completion = client.chat.completions.create(
-            model="gpt-4.1-nano-2025-04-14", messages=chat, temperature=0.2
+            model=os.getenv("MODEL_NAME", ""), messages=chat, temperature=0.2
         )
         print(f"assistant: {completion.choices[0].message.content}")
         chat.append(
