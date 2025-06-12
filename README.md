@@ -16,7 +16,7 @@ This project demonstrates several common LLM use cases:
 1. **Clone the repository:**
 
 ```bash
-git clone git@github.com:dheerapat/llm-demo.git
+git clone git@github.com:dheerapat/llms-pattern.git
 cd llm-demo
 ```
 
