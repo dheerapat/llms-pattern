@@ -39,11 +39,13 @@ uv sync
 ```
 
 4.  **Run the examples:**
+
 * **Chat:** `uv run chat/main.py`
 * **Multimodality:** `uv run multimodality/main.py`
 * **Structured Output:** `uv run structured-output/main.py`
 
 ## Important Notes
+
 * **API Key:**  Remember to keep your OpenAI API key secure and do not commit it to version control.
 * **Model Name:**  The default `MODEL_NAME` is `gpt-4.1-nano-2025-04-14`.  You can change this to any other compatible OpenAI model.  Refer to the OpenAI documentation for available models and pricing.
 * **Simplicity:** This repository prioritizes simplicity and clarity.  It intentionally avoids complex frameworks or abstractions to provide a foundational understanding of how to interact with the OpenAI API directly.
