@@ -48,7 +48,7 @@ def llm_extract_slide_info(img: str):
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}",
+                            "url": f"data:image/png;base64,{base64_image}",
                         },
                     },
                 ],
