@@ -44,7 +44,7 @@ def llm_extract_slide_info(img: str):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "extract only the content from this image"},
+                    {"type": "text", "text": "Extract the content from the provided document as if you were reading it naturally."},
                     {
                         "type": "image_url",
                         "image_url": {
