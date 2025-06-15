@@ -9,3 +9,6 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+pdf-to-note/img/
+pdf-to-note/resp.md

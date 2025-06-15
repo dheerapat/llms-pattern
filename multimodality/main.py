@@ -26,7 +26,7 @@ def main(img: str):
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "summarize this image"},
+                    {"type": "text", "text": "summarize content from this image"},
                     {
                         "type": "image_url",
                         "image_url": {
@@ -42,4 +42,4 @@ def main(img: str):
 
 
 if __name__ == "__main__":
-    main("symlink.jpg")
+    main("menignitis-th.png")
