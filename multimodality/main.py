@@ -21,7 +21,7 @@ def main(img: str):
     img_path = os.path.join(current_directory, "img", img)
     base64_image = encode_image(img_path)
     completion = client.chat.completions.create(
-        model=os.getenv("MODEL_NAME", ""),
+        model=os.getenv("VISION_MODEL_NAME", ""),
         messages=[
             {
                 "role": "user",

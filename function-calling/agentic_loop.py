@@ -50,7 +50,7 @@ TOOL_MAPPING = {"search_gutenberg_books": search_gutenberg_books}
 def call_llm(msgs: list[ChatCompletionMessageParam]):
     print(msgs)
     resp = client.chat.completions.create(
-        model=os.getenv("MODEL_NAME", ""), tools=tools, messages=msgs
+        model=os.getenv("TEXT_MODEL_NAME", ""), tools=tools, messages=msgs
     )
     return resp
 

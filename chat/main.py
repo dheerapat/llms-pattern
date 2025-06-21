@@ -12,7 +12,7 @@ client = OpenAI(
 
 def main():
     completion = client.chat.completions.create(
-        model=os.getenv("MODEL_NAME", ""),
+        model=os.getenv("TEXT_MODEL_NAME", ""),
         messages=[
             {"role": "user", "content": "I'm pickle Rick!"},
         ],

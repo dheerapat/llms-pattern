@@ -31,7 +31,7 @@ class MultipleChoiceQuestionFormat(BaseModel):
 def make_request(instruction: str):
 
     response = client.beta.chat.completions.parse(
-        model=os.getenv("MODEL_NAME", ""),
+        model=os.getenv("TEXT_MODEL_NAME", ""),
         messages=[
             {
                 "role": "system",

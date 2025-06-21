@@ -23,7 +23,7 @@ def chat_loop():
             break
         chat.append({"role": "user", "content": user_input})
         completion = client.chat.completions.create(
-            model=os.getenv("MODEL_NAME", ""), messages=chat, temperature=0.2
+            model=os.getenv("TEXT_MODEL_NAME", ""), messages=chat, temperature=0.2
         )
         print(f"assistant: {completion.choices[0].message.content}")
         chat.append(

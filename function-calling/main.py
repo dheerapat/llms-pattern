@@ -56,7 +56,7 @@ def main(instruction: str):
     ]
 
     completion = client.chat.completions.create(
-        model=os.getenv("MODEL_NAME", ""),
+        model=os.getenv("TEXT_MODEL_NAME", ""),
         messages=conversation,
         tool_choice="required",
         tools=tools,
