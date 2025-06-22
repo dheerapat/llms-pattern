@@ -1,8 +1,11 @@
 import os
+import typer
+import json
 from openai import OpenAI
 from pydantic import BaseModel
 from typing import Literal
 from dotenv import load_dotenv
+from rich import print
 
 load_dotenv()
 
@@ -35,7 +38,7 @@ def make_request(instruction: str):
         messages=[
             {
                 "role": "system",
-                "content": "You are biology expert, you can generating multiple choice question to help student learn about biology",
+                "content": "You are tutor expert, you can generating multiple choice question to help student learn about various topic",
             },
             {"role": "user", "content": instruction},
         ],
@@ -46,9 +49,13 @@ def make_request(instruction: str):
     return response.choices[0].message.content
 
 
-if __name__ == "__main__":
-    print(
-        make_request(
-            "create a sample question about biology to help student learn about dna replication"
-        )
+def main():
+    result = make_request(
+        "create a multiple choice question to help student learn about cellular respiration"
     )
+    if result is not None:
+        print(json.loads(result))
+
+
+if __name__ == "__main__":
+    typer.run(main)
