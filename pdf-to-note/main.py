@@ -62,7 +62,7 @@ def vllm_extractor(img: str, current_directory: str):
     with open(os.path.join(current_directory, "resp.txt"), "a", encoding="utf-8") as f:
         f.write(f"{response_content}\n\n")
 
-    print(f"Response from `{img}` saved to resp.txt")
+    print(f"Response from [bold yellow]`{img}`[/bold yellow] saved to resp.txt")
 
 
 def llm_summarizer(file: str, current_directory: str):
@@ -138,9 +138,9 @@ def main(pdf_path: str):
         img = f"page-{page}.png"
         vllm_extractor(img, current_directory)
 
-    print("\nSummary:\n")
+    print("\n[bold green]Summary:[/bold green]")
     print(llm_summarizer("resp.txt", current_directory))
-    print("\nMCQ:\n")
+    print("\n[bold green]MCQ:[/bold green]")
     mcq_result = llm_mcq_generator("resp.txt", current_directory)
     if mcq_result is not None:
         print(json.loads(mcq_result))
