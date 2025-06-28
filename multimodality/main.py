@@ -42,4 +42,4 @@ def main(img: str):
 
 
 if __name__ == "__main__":
-    main("menignitis-th.png")
+    main("symlink.jpg")
