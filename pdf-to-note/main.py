@@ -3,6 +3,7 @@ import base64
 import typer
 import pymupdf
 import json
+import shutil
 from rich import print
 from rich.progress import track
 from openai import OpenAI
@@ -16,6 +17,21 @@ client = OpenAI(
     base_url=os.getenv("BASE_URL"),
     api_key=os.getenv("LLM_API_KEY"),
 )
+
+
+def direct_text_extractor(pdf_path: str, current_directory: str) -> bool:
+    doc = pymupdf.open(pdf_path)
+    all_text = ""
+    for page in doc:
+        all_text += page.get_text()  # type: ignore
+        all_text += "\n\n"
+
+    if not all_text.strip():
+        return False
+
+    with open(os.path.join(current_directory, "resp.txt"), "w", encoding="utf-8") as f:
+        f.write(all_text)
+    return True
 
 
 def pdf_to_image_converter(pdf_path: str, output_dir: str) -> int:
@@ -128,18 +144,43 @@ def llm_mcq_generator(file: str, current_directory: str):
     return response.choices[0].message.content
 
 
-def main(pdf_path: str):
+def main(
+    pdf_path: str,
+    use_vllm: bool = typer.Option(
+        False, "--use-vllm", help="Use VLLM to extract content from document."
+    ),
+):
     current_directory = os.path.dirname(os.path.abspath(__file__))
     img_directory = os.path.join(current_directory, "img")
+    resp_file = os.path.join(current_directory, "resp.txt")
 
-    number_of_pages = pdf_to_image_converter(pdf_path, img_directory)
+    if os.path.exists(img_directory):
+        shutil.rmtree(img_directory)
 
-    for page in track(range(number_of_pages)):
-        img = f"page-{page}.png"
-        vllm_extractor(img, current_directory)
+    if os.path.exists(resp_file):
+        os.remove(resp_file)
+
+    if use_vllm:
+        print("Using VLLM to extract content from document.")
+        number_of_pages = pdf_to_image_converter(pdf_path, img_directory)
+
+        for page in track(range(number_of_pages)):
+            img = f"page-{page}.png"
+            vllm_extractor(img, current_directory)
+    else:
+        print("Extracting text directly from PDF.")
+        if not direct_text_extractor(pdf_path, current_directory):
+            print(
+                "[bold red]Error: Could not extract text directly from PDF. The PDF might be image-based. Try running with the --use-vllm flag.[/bold red]"
+            )
+            raise typer.Exit(1)
+        else:
+            print("Successfully extracted text directly from PDF.")
 
     print("\n[bold green]Summary:[/bold green]")
-    print(llm_summarizer("resp.txt", current_directory))
+    summary = llm_summarizer("resp.txt", current_directory)
+    print(summary)
+
     print("\n[bold green]MCQ:[/bold green]")
     mcq_result = llm_mcq_generator("resp.txt", current_directory)
     if mcq_result is not None:

@@ -2,11 +2,13 @@
 
 ### Overview
 
-**Document Extractor for Learning Tool (DELT)** is a Python application designed to extract content from PDF documents using Optical Character Recognition (OCR) capabilities via a Vision Large Language Model (VLLM), summarize the extracted text using a Text Large Language Model (LLM), and generate Multiple Choice Questions (MCQs) based on the summarized content.
+**Document Extractor for Learning Tool (DELT)** is a Python application designed to extract content from PDF documents, summarize the extracted text using a Text Large Language Model (LLM), and generate Multiple Choice Questions (MCQs) based on the summarized content.
+
+The script can extract text directly from text-based PDFs or use a Vision Large Language Model (VLLM) for image-based PDFs.
 
 ### Requirements
 
-Make sure you have latest version of [uv](https://docs.astral.sh/uv/) installed.
+Make sure you have the latest version of [uv](https://docs.astral.sh/uv/) installed.
 
 ### How to run
 
@@ -22,5 +24,9 @@ cp .env.example .env
 uv sync
 
 # run the script
-uv run pdf-to-note/main.py <path to pdf file>
+# For text-based PDFs
+uv run python pdf-to-note/main.py <path_to_pdf>
+
+# For image-based PDFs
+uv run python pdf-to-note/main.py <path_to_pdf> --use-vllm
 ```
