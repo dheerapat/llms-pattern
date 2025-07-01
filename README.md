@@ -47,7 +47,7 @@ uv sync
 ## Important Notes
 
 * **API Key:**  Remember to keep your OpenAI API key secure and do not commit it to version control.
-* **Model Name:**  The default `TEXT_MODEL_NAME` is `gpt-4.1-nano` and `gpt-4.1-mini` for `VISION_MODEL_NAME`. You can change this to any other compatible OpenAI model.  Refer to the OpenAI documentation for available models and pricing.
+* **Model Name:**  The default `TEXT_MODEL_NAME` is `gpt-4.1-nano` and `gpt-4.1-mini` for `VISION_MODEL_NAME`. You can change this to any other OpenAI compatible model endpoint.
 * **Simplicity:** This repository prioritizes simplicity and clarity.  It intentionally avoids complex frameworks or abstractions to provide a foundational understanding of how to interact with the OpenAI API directly.
 * **Image for Multimodality:** The `multimodality` example requires an image file named `symlink.jpg` in the `multimodality/img` directory.  You can replace this with any other image file.
 
