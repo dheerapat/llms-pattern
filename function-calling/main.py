@@ -2,6 +2,7 @@ import os
 import json
 import requests
 from openai import OpenAI
+from rich import print
 from openai.types.chat import (
     ChatCompletionToolParam,
     ChatCompletionSystemMessageParam,
@@ -72,6 +73,10 @@ def main(instruction: str):
     for tool_call in response.tool_calls:
         tool_name = tool_call.function.name
         tool_args = json.loads(tool_call.function.arguments)
+        print(
+            f"\n[bold yellow]Model decide to use tools:[/bold yellow] [green]{tool_name}[green]"
+        )
+        print(f"Tool arguments: {tool_args}\n")
         tool_response = TOOL_MAPPING[tool_name](**tool_args)
         conversation.append(
             {
@@ -82,10 +87,10 @@ def main(instruction: str):
             }
         )
     answer = client.chat.completions.create(
-        model=os.getenv("MODEL_NAME", ""), messages=conversation
+        model=os.getenv("TEXT_MODEL_NAME", ""), messages=conversation
     )
     print(answer.choices[0].message.content)
 
 
 if __name__ == "__main__":
-    main("What are the title of book from Homer?")
+    main("What are the titles of book from Agatha Christie on project Gutenberg?")
