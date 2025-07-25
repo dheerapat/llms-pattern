@@ -62,14 +62,13 @@ def generate_keyword(query: str):
                 
                 ## Examples
                 | User Query | Optimal Keyword |
-                |------------|----------------|
-                | "What are the benefits of circumcision?" | "circumcision benefits" |
+                |------------|-----------------|
                 | "Side effects of statins on muscles" | "statin myopathy" |
                 | "How effective is cognitive behavioral therapy for depression?" | "CBT depression" |
                 | "Cancer treatment using immunotherapy" | "cancer immunotherapy" |
                 
                 ## Output Format
-                Return only the keyword string - no explanation, quotes, or additional text unless specifically requested.
+                Return only the keyword string - no explanation, quotes, or additional text.
                 
                 ## Quality Checks
                 - Would this keyword appear in relevant PubMed titles/abstracts?
@@ -125,9 +124,9 @@ def classify_rct(abstract_text: str) -> RCTClassification:
                 - Editorial, commentary, or review articles
                 
                 ## Classification Rules:
-                - Classify as "RCT" only if ALL RCT criteria are met
-                - Classify as "META_ANALYSIS" only if ALL meta-analysis criteria are met
-                - If a study meets criteria for both (rare), prioritize "META_ANALYSIS"
+                - Classify as "RCT" only if most RCT criteria are met
+                - Classify as "META_ANALYSIS" only if most meta-analysis criteria are met
+                - If a study equally meets criteria for both (rare), prioritize "META_ANALYSIS"
                 - Otherwise, classify as "NOT_RCT_OR_META"
                 Provide your classification as one of: "rct", "meta_analysis", or "not_rct_or_meta"
                 """,

@@ -53,13 +53,13 @@ class PubMedArticle(BaseModel):
     abstact: Abstract
 
 
-def search_journal(keyword: str) -> PubMedSearchResponse:
+def search_journal(keyword: str, proximity: int = 5) -> PubMedSearchResponse:
     if not keyword.strip():
         raise ValueError("Keyword cannot be empty")
 
     param = {
         "db": "pubmed",
-        "term": f'"{keyword}"[Title/Abstract:~5]',
+        "term": f'"{keyword}"[Title/Abstract:~{proximity}]',
         "retmode": "json",
         "sort": "pub_date",
         "retmax": 10,
