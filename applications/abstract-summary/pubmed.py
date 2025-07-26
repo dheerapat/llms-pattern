@@ -174,7 +174,7 @@ if __name__ == "__main__":
         result = search_journal("bilastine allergic rhinitis")
         print_search_results(result)
 
-        xml = get_abstract("99999999999", "xml")
+        xml = get_abstract("40419146", "xml")
         articles = parse_pubmed_xml(xml)
         print_article_info(articles)
     except Exception as e:

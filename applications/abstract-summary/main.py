@@ -3,7 +3,7 @@ from typing import Literal, List
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
-from pubmed import get_abstract, search_journal
+from pubmed import get_abstract, search_journal, parse_pubmed_xml
 
 load_dotenv()
 
@@ -146,11 +146,20 @@ if __name__ == "__main__":
     output = generate_keyword("benefit of circumcision")
     print(output)
 
-    rct_abstract = get_abstract("40419146", "text")  # rct
-    print(classify_rct(rct_abstract))
+    # rct
+    rct_abstract = get_abstract("40419146", "xml")
+    parsed_rct_abstract = parse_pubmed_xml(rct_abstract)
+    print(parsed_rct_abstract[0].abstact.full_abstract)
+    print(classify_rct(parsed_rct_abstract[0].abstact.full_abstract))
 
-    meta_abstract = get_abstract("36380619", "text")  # meta-analysis
-    print(classify_rct(meta_abstract))
+    # meta-analysis
+    meta_abstract = get_abstract("36380619", "xml")
+    parsed_meta_abstract = parse_pubmed_xml(meta_abstract)
+    print(parsed_meta_abstract[0].abstact.full_abstract)
+    print(classify_rct(parsed_meta_abstract[0].abstact.full_abstract))
 
-    not_rct_abstract = get_abstract("22686617", "text")  # not rct
-    print(classify_rct(not_rct_abstract))
+    # not rct
+    not_rct_abstract = get_abstract("22686617", "xml")
+    parse_not_rct_abstract = parse_pubmed_xml(not_rct_abstract)
+    print(parse_not_rct_abstract[0].abstact.full_abstract)
+    print(classify_rct(parse_not_rct_abstract[0].abstact.full_abstract))
