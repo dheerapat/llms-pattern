@@ -12,3 +12,5 @@ wheels/
 
 applications/pdf-to-note/img/
 applications/pdf-to-note/resp.txt
+
+logs/

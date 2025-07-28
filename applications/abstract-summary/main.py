@@ -1,6 +1,6 @@
 import os
-from typing import Literal, List
-from pydantic import BaseModel
+from typing import Literal
+from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
 from pubmed import get_abstract, search_journal, parse_pubmed_xml
@@ -14,10 +14,12 @@ client = OpenAI(
 
 
 class SearchKeyword(BaseModel):
+    reasoning: str = Field(description="your step by step reasoning on how to get these keyword")
     keyword: str
 
 
 class RCTClassification(BaseModel):
+    reasoning: str = Field(description="your step by step reasoning on your decision")
     classification: Literal["rct", "not_rct_or_meta", "meta_analysis"]
 
 
@@ -143,23 +145,33 @@ def classify_rct(abstract_text: str) -> RCTClassification:
 
 
 if __name__ == "__main__":
-    output = generate_keyword("benefit of circumcision")
-    print(output)
+    # output = generate_keyword("benefit of circumcision")
+    # print(output)
 
-    # rct
-    rct_abstract = get_abstract("40419146", "xml")
-    parsed_rct_abstract = parse_pubmed_xml(rct_abstract)
-    print(parsed_rct_abstract[0].abstact.full_abstract)
-    print(classify_rct(parsed_rct_abstract[0].abstact.full_abstract))
+    # # rct
+    # rct_abstract = get_abstract("40419146", "xml")
+    # parsed_rct_abstract = parse_pubmed_xml(rct_abstract)
+    # print(parsed_rct_abstract[0].abstact.full_abstract)
+    # print(classify_rct(parsed_rct_abstract[0].abstact.full_abstract))
 
-    # meta-analysis
-    meta_abstract = get_abstract("36380619", "xml")
-    parsed_meta_abstract = parse_pubmed_xml(meta_abstract)
-    print(parsed_meta_abstract[0].abstact.full_abstract)
-    print(classify_rct(parsed_meta_abstract[0].abstact.full_abstract))
+    # # meta-analysis
+    # meta_abstract = get_abstract("36380619", "xml")
+    # parsed_meta_abstract = parse_pubmed_xml(meta_abstract)
+    # print(parsed_meta_abstract[0].abstact.full_abstract)
+    # print(classify_rct(parsed_meta_abstract[0].abstact.full_abstract))
 
-    # not rct
-    not_rct_abstract = get_abstract("22686617", "xml")
-    parse_not_rct_abstract = parse_pubmed_xml(not_rct_abstract)
-    print(parse_not_rct_abstract[0].abstact.full_abstract)
-    print(classify_rct(parse_not_rct_abstract[0].abstact.full_abstract))
+    # # not rct
+    # not_rct_abstract = get_abstract("23242729", "xml")
+    # parse_not_rct_abstract = parse_pubmed_xml(not_rct_abstract)
+    # print(parse_not_rct_abstract[0].abstact.full_abstract)
+    # print(classify_rct(parse_not_rct_abstract[0].abstact.full_abstract))
+
+    # ids = ["36578889", "30039871", "35082662", "35537861", "33999947"] # meta
+    # ids = ["28066101","34476568","35939311","37960261","35956364"] # rct
+    ids = ["32457512","38720498","21831011","34706925","37571305"] # non rct
+
+    for id in ids:
+        print(id)
+        abs = get_abstract(id, "xml")
+        parsed = parse_pubmed_xml(abs)
+        print(classify_rct(parsed[0].abstact.full_abstract))

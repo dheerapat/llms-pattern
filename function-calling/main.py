@@ -59,7 +59,7 @@ def main(instruction: str):
     completion = client.chat.completions.create(
         model=os.getenv("TEXT_MODEL_NAME", ""),
         messages=conversation,
-        tool_choice="required",
+        tool_choice="auto",
         tools=tools,
     )
 

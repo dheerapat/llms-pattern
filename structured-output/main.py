@@ -2,7 +2,7 @@ import os
 import typer
 import json
 from openai import OpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal
 from dotenv import load_dotenv
 from rich import print
@@ -16,6 +16,7 @@ client = OpenAI(
 
 
 class MultipleChoiceQuestionFormat(BaseModel):
+    reasoning: str = Field(description="your step by step reasoning to construct the question")
     question: str
     choice_a: str
     choice_b: str
