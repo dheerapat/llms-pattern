@@ -16,7 +16,9 @@ client = OpenAI(
 
 
 class MultipleChoiceQuestionFormat(BaseModel):
-    reasoning: str = Field(description="your step by step reasoning to construct the question")
+    reasoning: str = Field(
+        description="your step by step reasoning to construct the question"
+    )
     question: str
     choice_a: str
     choice_b: str

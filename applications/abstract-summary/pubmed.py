@@ -50,7 +50,7 @@ class Abstract(BaseModel):
 
 class PubMedArticle(BaseModel):
     pmid: str
-    abstact: Abstract
+    abstract: Abstract
 
 
 def search_journal(keyword: str, proximity: int = 5) -> PubMedSearchResponse:
@@ -139,7 +139,7 @@ def parse_pubmed_xml(xml_content: str) -> List[PubMedArticle]:
                 title=title or "", abstract_sections=abstract_sections, doi=doi
             )
 
-            articles.append(PubMedArticle(pmid=pmid or "", abstact=article))
+            articles.append(PubMedArticle(pmid=pmid or "", abstract=article))
 
         return articles
 
@@ -151,12 +151,12 @@ def print_article_info(articles: List[PubMedArticle]) -> None:
     for article in articles:
         print(f"\n{'='*80}")
         print(f"PMID: {article.pmid}")
-        print(f"Title: {article.abstact.title}")
-        print(f"DOI: {article.abstact.doi}")
+        print(f"Title: {article.abstract.title}")
+        print(f"DOI: {article.abstract.doi}")
         print(f"\nAbstract:")
 
-        if article.abstact.abstract_sections:
-            for section in article.abstact.abstract_sections:
+        if article.abstract.abstract_sections:
+            for section in article.abstract.abstract_sections:
                 if section.label:
                     print(f"\n{section.label.upper()}:")
                     print(section.content)
@@ -166,7 +166,7 @@ def print_article_info(articles: List[PubMedArticle]) -> None:
             print("No abstract available")
 
         print(f"\nFull Abstract (combined):")
-        print(article.abstact.full_abstract)
+        print(article.abstract.full_abstract)
 
 
 if __name__ == "__main__":
@@ -174,7 +174,7 @@ if __name__ == "__main__":
         # result = search_journal("bilastine allergic rhinitis")
         # print_search_results(result)
 
-        xml = get_abstract("37571305", "xml")
+        xml = get_abstract("33999947", "xml")
         articles = parse_pubmed_xml(xml)
         print_article_info(articles)
     except Exception as e:
