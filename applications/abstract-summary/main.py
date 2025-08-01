@@ -25,6 +25,7 @@ def main(
     context = []
 
     if strict:
+        print("determine each abstract if it is high quality or not, stand by ...")
         for abs in parsed:
             abstract = abs.abstract.full_abstract.strip()
             if abstract:
@@ -37,11 +38,14 @@ def main(
             else:
                 continue
     else:
+        print("fetched all related abstract for you")
         context = parsed
 
-    print(f"found {len(context)} most related abstract related to the query")
+    print(
+        f"found {len(context)} most updated abstract related to the query, generating answer ...\n"
+    )
     result = generate_answer(context, query)
-    print("Answer:")
+    print("Answer:\n")
     print(result)
 
 
