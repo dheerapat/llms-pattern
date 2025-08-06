@@ -41,6 +41,10 @@ def main(
         print("fetched all related abstract for you")
         context = parsed
 
+    if len(context) == 0:
+        print("no related abstract found, abort")
+        return
+
     print(
         f"found {len(context)} most updated abstract related to the query, generating answer ...\n"
     )

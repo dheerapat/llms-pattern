@@ -48,16 +48,32 @@ def make_request(instruction: str):
         response_format=MultipleChoiceQuestionFormat,
         temperature=0.2,
     )
-
+    print(response)
     return response.choices[0].message.content
 
+def response(instruction: str):
+
+    response = client.responses.parse(
+        model=os.getenv("TEXT_MODEL_NAME", ""),
+        input=[
+            {
+                "role": "system",
+                "content": "You are tutor expert, you can generating multiple choice question to help student learn about various topic",
+            },
+            {"role": "user", "content": instruction},
+        ],
+        text_format=MultipleChoiceQuestionFormat,
+        temperature=0.2,
+    )
+
+    return response.output_parsed
 
 def main():
     result = make_request(
         "create a multiple choice question to help student learn about cellular respiration"
     )
     if result is not None:
-        print(json.loads(result))
+        print(result)
 
 
 if __name__ == "__main__":
