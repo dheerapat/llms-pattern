@@ -51,6 +51,7 @@ def make_request(instruction: str):
     print(response)
     return response.choices[0].message.content
 
+
 def response(instruction: str):
 
     response = client.responses.parse(
@@ -67,6 +68,7 @@ def response(instruction: str):
     )
 
     return response.output_parsed
+
 
 def main():
     result = make_request(

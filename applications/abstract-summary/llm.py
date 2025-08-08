@@ -84,7 +84,7 @@ def generate_keyword(query: str) -> SearchKeyword:
             {"role": "user", "content": query},
         ],
         response_format=SearchKeyword,
-        temperature=0.1,
+        temperature=1,
     )
     result = response.choices[0].message.parsed
     if result is None:
@@ -157,7 +157,7 @@ def classify_rct(abstract_text: str) -> RCTClassification:
             {"role": "user", "content": abstract_text},
         ],
         response_format=RCTClassification,
-        temperature=0.1,
+        temperature=1,
     )
     result = response.choices[0].message.parsed
     if result is None:
@@ -170,12 +170,11 @@ def generate_answer(abstracts: List[PubMedArticle], query: str) -> str:
     formatted_abstracts = []
     for i, article in enumerate(abstracts, 1):
         abstract_text = f"""
-Article {i} (PMID: {article.pmid}):
-Title: {article.abstract.title}
-Abstract: {article.abstract.full_abstract}
-DOI: {article.abstract.doi or 'Not available'}
-"""
-        formatted_abstracts.append(abstract_text.strip())
+        Article {i} (PMID: {article.pmid}):
+        Title: {article.abstract.title}
+        Abstract: {article.abstract.full_abstract}
+        DOI: {article.abstract.doi or 'Not available'}""".strip()
+        formatted_abstracts.append(abstract_text)
 
     abstracts_content = "\n\n" + "\n\n".join(formatted_abstracts)
 
@@ -185,15 +184,17 @@ DOI: {article.abstract.doi or 'Not available'}
             {
                 "role": "system",
                 "content": f"""
-You are an expert medical assistant specializing in clinical decision support using evidence-based research.
-Your task is to analyze the provided abstracts that come from searching the PubMed Entrez database using the user's query
-and answer the user's question based on the provided abstracts given to you.
+                You are an expert medical assistant specializing in clinical decision support using evidence-based research.
+                Your task is to analyze the provided abstracts that come from searching the PubMed Entrez database using the user's query
+                and answer the user's question based on the provided abstracts given to you.
+                
+                Please provide accurate, evidence-based responses and cite the relevant articles by their PMID when making specific claims.
+                If the abstracts don't contain sufficient information to answer the query, please state this clearly.
+                
+                Abstracts:
+                {abstracts_content}
 
-Please provide accurate, evidence-based responses and cite the relevant articles by their PMID when making specific claims.
-If the abstracts don't contain sufficient information to answer the query, please state this clearly.
-
-Abstracts:
-{abstracts_content}
+                Your answer will conclude this conversation with the user. Please do not ask follow-up questions or offer additional assistance.
                 """.strip(),
             },
             {"role": "user", "content": query},
@@ -204,31 +205,31 @@ Abstracts:
 
 
 if __name__ == "__main__":
-    query = "allregic rhinitis firstline therapy"
-    keyword = generate_keyword(query)
-    print(keyword)
+    # query = "allregic rhinitis firstline therapy"
+    # keyword = generate_keyword(query)
+    # print(keyword)
 
-    journal_ids = search_journal(keyword=keyword.keyword).esearchresult.idlist
-    ids = ", ".join(journal_ids)
-    print(ids)
+    # journal_ids = search_journal(keyword=keyword.keyword).esearchresult.idlist
+    # ids = ", ".join(journal_ids)
+    # print(ids)
 
-    abs = get_abstract(ids, "xml")
-    parsed = parse_pubmed_xml(abs)
-    for abstract in parsed:
-        if abstract.abstract.full_abstract.strip():
-            print("---")
-            print(abstract.abstract.full_abstract)
+    # abs = get_abstract(ids, "xml")
+    # parsed = parse_pubmed_xml(abs)
+    # for abstract in parsed:
+    #     if abstract.abstract.full_abstract.strip():
+    #         print("---")
+    #         print(abstract.abstract.full_abstract)
 
-    result = generate_answer(parsed, query)
-    print("===")
-    print(result)
+    # result = generate_answer(parsed, query)
+    # print("===")
+    # print(result)
 
     # ids = ["36578889", "30039871", "35082662", "35537861", "33999947"]  # meta
     # ids = ["28066101","34476568","35939311","37960261","35956364"] # rct
-    # ids = ["32457512", "38720498", "21831011", "34706925", "37571305"]  # non rct
+    ids = ["32457512", "38720498", "21831011", "34706925", "37571305"]  # non rct
 
-    # for id in ids:
-    #     print(id)
-    #     abs = get_abstract(id, "xml")
-    #     parsed = parse_pubmed_xml(abs)
-    #     print(classify_rct(parsed[0].abstract.full_abstract))
+    for id in ids:
+        print(id)
+        abs = get_abstract(id, "xml")
+        parsed = parse_pubmed_xml(abs)
+        print(classify_rct(parsed[0].abstract.full_abstract))
