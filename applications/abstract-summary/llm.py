@@ -191,10 +191,10 @@ def generate_answer(abstracts: List[PubMedArticle], query: str) -> str:
                 Please provide accurate, evidence-based responses and cite the relevant articles by their PMID when making specific claims.
                 If the abstracts don't contain sufficient information to answer the query, please state this clearly.
                 
+                Your answer will conclude this conversation with the user. Please do not ask follow-up questions or offer additional assistance.
+                
                 Abstracts:
                 {abstracts_content}
-
-                Your answer will conclude this conversation with the user. Please do not ask follow-up questions or offer additional assistance.
                 """.strip(),
             },
             {"role": "user", "content": query},
