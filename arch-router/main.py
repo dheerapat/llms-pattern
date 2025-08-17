@@ -78,7 +78,7 @@ def format_prompt(
 conversation = [
     {
         "role": "user",
-        "content": "explain clean architecture",
+        "content": "what is buffer overflow",
     }
 ]
 

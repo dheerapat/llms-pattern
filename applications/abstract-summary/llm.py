@@ -84,7 +84,7 @@ def generate_keyword(query: str) -> SearchKeyword:
             {"role": "user", "content": query},
         ],
         response_format=SearchKeyword,
-        temperature=1,
+        temperature=0,
     )
     result = response.choices[0].message.parsed
     if result is None:
@@ -157,7 +157,7 @@ def classify_rct(abstract_text: str) -> RCTClassification:
             {"role": "user", "content": abstract_text},
         ],
         response_format=RCTClassification,
-        temperature=1,
+        temperature=0,
     )
     result = response.choices[0].message.parsed
     if result is None:
@@ -224,9 +224,9 @@ if __name__ == "__main__":
     # print("===")
     # print(result)
 
-    # ids = ["36578889", "30039871", "35082662", "35537861", "33999947"]  # meta
+    ids = ["36578889", "30039871", "35082662", "35537861", "33999947"]  # meta
     # ids = ["28066101","34476568","35939311","37960261","35956364"] # rct
-    ids = ["32457512", "38720498", "21831011", "34706925", "37571305"]  # non rct
+    # ids = ["32457512", "38720498", "21831011", "34706925", "37571305"]  # non rct
 
     for id in ids:
         print(id)

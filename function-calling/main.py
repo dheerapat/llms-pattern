@@ -59,10 +59,10 @@ def main(instruction: str):
     completion = client.chat.completions.create(
         model=os.getenv("TEXT_MODEL_NAME", ""),
         messages=conversation,
-        tool_choice="required",
+        # tool_choice="required",
         tools=tools,
     )
-
+    print(completion)
     response = completion.choices[0].message
 
     if response.tool_calls is None:
