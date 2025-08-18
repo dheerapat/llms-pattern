@@ -1,10 +1,11 @@
 import os
 import json
 from openai import OpenAI
-from typing import Any, Dict, List
+from typing import Dict, List, Literal
 from dotenv import load_dotenv
 from rich import print
 from pubmed import get_abstract, parse_pubmed_xml
+from pydantic import BaseModel, ValidationError
 
 load_dotenv()
 
@@ -85,7 +86,11 @@ route_config = [
 ]
 
 
-def format_prompt(route_config: List[Dict[str, Any]], abstract: str):
+class ClassificationResult(BaseModel):
+    route: Literal["rct", "meta_analysis", "animal_studies", "review_article"]
+
+
+def format_prompt(route_config: List[Dict[str, str]], abstract: str):
     return (
         TASK_INSTRUCTION.format(routes=json.dumps(route_config), abstract=abstract)
         + FORMAT_PROMPT
@@ -116,6 +121,32 @@ def find_json_objects(text: str) -> List[str]:
     return json_candidates
 
 
+def classify(abstract_text: str) -> ClassificationResult:
+    route_prompt = format_prompt(route_config, abstract_text)
+    completion = client.chat.completions.create(
+        model=os.getenv("TEXT_MODEL_NAME", ""),
+        messages=[
+            # {"role": "system", "content": "/no_think"},
+            {"role": "user", "content": route_prompt},
+        ],
+    )
+
+    if completion.choices[0].message.content is None:
+        raise ValueError("No response content received from the model")
+
+    json_candidates = find_json_objects(completion.choices[0].message.content)
+    if not json_candidates:
+        raise ValueError("No JSON object found in response")
+
+    try:
+        json_obj = json.loads(json_candidates[0])
+        return ClassificationResult.model_validate(json_obj)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON format: {e}")
+    except ValidationError as e:
+        raise ValueError(f"Validation error: {e}")
+
+
 if __name__ == "__main__":
     ids = []
     ids += ["36578889", "30039871", "35082662", "35537861", "33999947"]  # meta
@@ -126,15 +157,5 @@ if __name__ == "__main__":
         print(id)
         abs = get_abstract(id, "xml")
         parsed = parse_pubmed_xml(abs)
-        route_prompt = format_prompt(route_config, parsed[0].abstract.full_abstract)
-        completion = client.chat.completions.create(
-            model=os.getenv("TEXT_MODEL_NAME", ""),
-            messages=[
-                # {"role": "system", "content": "/no_think"},
-                {"role": "user", "content": route_prompt},
-            ],
-        )
-        if completion.choices[0].message.content is not None:
-            obj = find_json_objects(completion.choices[0].message.content)
-            json_obj = json.loads(obj[0])
-            print(json_obj)
+        result = classify(parsed[0].abstract.full_abstract)
+        print(result)
