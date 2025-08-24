@@ -3,6 +3,7 @@ from rich import print
 from typing_extensions import Annotated
 from pubmed import get_abstract, parse_pubmed_xml, search_journal
 from llm import generate_answer, generate_keyword, classify_rct
+from parsing_json import classify, get_keyword
 
 
 def main(
@@ -14,7 +15,7 @@ def main(
         ),
     ] = False,
 ):
-    keyword = generate_keyword(query)
+    keyword = get_keyword(query)
     print(f"searching pubmed database with following keyword: '{keyword.keyword}'")
 
     journals = search_journal(keyword=keyword.keyword)
@@ -29,10 +30,10 @@ def main(
         for abs in parsed:
             abstract = abs.abstract.full_abstract.strip()
             if abstract:
-                result = classify_rct(abstract)
+                result = classify(abstract)
                 if (
-                    result.classification == "rct"
-                    or result.classification == "meta_analysis"
+                    result.route == "randomized_controlled_trial"
+                    or result.route == "meta_analysis"
                 ):
                     context.append(abs)
             else:
