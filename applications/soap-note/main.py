@@ -3,6 +3,7 @@ import textwrap
 from rich import print
 from subjective_data import get_subjective_data, SubjectiveDataResult
 from objective_data import get_objective_data, ObjectiveDataResult
+from assessment import get_assessment, AssessmentResult
 
 
 def find_json_objects(text: str) -> list[str]:
@@ -39,7 +40,8 @@ Had gastroenteritis 3 days ago. On presentation, patient is lethargic but arousa
 Vital signs: BP 95/60, HR 118, RR 28 (deep breathing pattern), T 37.5°C, O2 sat 98% RA. Mucous membranes dry, skin tenting present.
 Breath has fruity odor. Abdominal exam shows mild diffuse tenderness. Neurologically intact but sluggish responses.
 Labs: glucose 485 mg/dL, ketones 4.2 mmol/L (normal <0.6), pH 7.12, bicarbonate 8 mEq/L, anion gap 24. Urinalysis shows 4+ glucose, 3+ ketones.
-ECG shows sinus tachycardia.""")
+ECG shows sinus tachycardia."""
+)
 
 print(f"[bold blue]chief complaint:[/bold blue] [white]{cc}[/white]")
 
@@ -56,3 +58,9 @@ print("[bold blue]subjective data: [/bold blue]")
 print(sub_json_obj)
 print("[bold blue]objective data: [/bold blue]")
 print(obj_json_obj)
+
+assessment_resp = get_assessment(cc, sub_json_obj, obj_json_obj)
+assessment_json_candidates = find_json_objects(assessment_resp)
+assessment_json_obj = json.loads(assessment_json_candidates[0])
+print("[bold blue]assessment: [/bold blue]")
+print(assessment_json_obj)
