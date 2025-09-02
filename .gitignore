@@ -14,3 +14,6 @@ applications/pdf-to-note/img/
 applications/pdf-to-note/resp.txt
 
 logs/
+
+vector-store/embeddings.pkl
+vector-store/metadata.json
