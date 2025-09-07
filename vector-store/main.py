@@ -2,15 +2,41 @@ import os
 import json
 import pickle
 import numpy as np
-from typing import List, Dict, Optional
+from typing import Optional, Tuple
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from pydantic import BaseModel
+
+
+# -------------------------------
+# Pydantic Models
+# -------------------------------
+class Chunk(BaseModel):
+    doc_id: str
+    title: str
+    section_path: str
+    content: str
+
+
+class SearchResult(BaseModel):
+    doc_id: str
+    title: str
+    section_path: str
+    content: str
+    similarity: float
+
+
+class Metadata(BaseModel):
+    chunks: list[Chunk]
+    embedding_dim: int
+    num_chunks: int
+    num_docs: int
 
 
 # -------------------------------
 # Markdown Chunker (no regex)
 # -------------------------------
-def chunk_markdown(md_text: str, doc_id: str) -> List[Dict]:
+def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
     """
     Chunks a markdown document into sections based on headings (# to ######).
     Each chunk contains a section's content and its full hierarchical path.
@@ -29,12 +55,12 @@ def chunk_markdown(md_text: str, doc_id: str) -> List[Dict]:
         if not content_buffer or not section_stack:
             return
 
-        chunk = {
-            "doc_id": doc_id,
-            "title": current_title,
-            "section_path": " > ".join(s["text"] for s in section_stack),
-            "content": "\n".join(content_buffer).strip(),
-        }
+        chunk = Chunk(
+            doc_id=doc_id,
+            title=current_title,
+            section_path=" > ".join(s["text"] for s in section_stack),
+            content="\n".join(content_buffer).strip(),
+        )
         chunks.append(chunk)
         content_buffer.clear()
 
@@ -90,22 +116,22 @@ class HybridVectorStore:
         self,
         embeddings_file: str = "vector-store/embeddings.pkl",
         metadata_file: str = "vector-store/metadata.json",
-    ):
+    ) -> None:
         self.embeddings_file = embeddings_file
         self.metadata_file = metadata_file
         self.embeddings: Optional[np.ndarray] = None
-        self.metadata: Optional[Dict] = None
+        self.metadata: Optional[dict] = None
         self.model = SentenceTransformer("ibm-granite/granite-embedding-english-r2")
 
     def precompute_embeddings(
-        self, documents: List[str], doc_ids: Optional[List[str]] = None
-    ):
+        self, documents: list[str], doc_ids: Optional[list[str]] = None
+    ) -> None:
         """
         Processes and embeds a list of markdown documents and saves the results.
         If doc_ids are not provided, generic IDs will be created.
         """
         print("Chunking and computing embeddings...")
-        all_chunks = []
+        all_chunks: list[Chunk] = []
         doc_ids = doc_ids or [f"doc_{i}" for i in range(len(documents))]
 
         for doc_text, doc_id in zip(documents, doc_ids):
@@ -124,11 +150,12 @@ class HybridVectorStore:
                 "num_docs": len(documents),
             }
         else:
-            contents = [c["content"] for c in all_chunks]
+            # Concatenate section path with content for embedding
+            contents = [f"{c.section_path} {c.content}" for c in all_chunks]
             self.embeddings = self.model.encode(contents, show_progress_bar=True)
 
             self.metadata = {
-                "chunks": all_chunks,
+                "chunks": [chunk.model_dump() for chunk in all_chunks],
                 "embedding_dim": self.embeddings.shape[1],
                 "num_chunks": len(all_chunks),
                 "num_docs": len(documents),
@@ -142,7 +169,7 @@ class HybridVectorStore:
 
         print(f"Saved {len(all_chunks)} chunks from {len(documents)} docs.")
 
-    def load_embeddings(self):
+    def load_embeddings(self) -> None:
         """Loads pre-computed embeddings and metadata from disk into memory."""
         if not os.path.exists(self.embeddings_file) or not os.path.exists(
             self.metadata_file
@@ -162,7 +189,7 @@ class HybridVectorStore:
 
         print(f"Loaded {self.metadata.get('num_chunks', 0)} chunks into memory.")
 
-    def search(self, query: str, top_k: int = 5) -> List[Dict]:
+    def search(self, query: str, top_k: int = 5) -> list[SearchResult]:
         """Performs a semantic search for the most relevant chunks."""
         if self.embeddings is None or self.metadata is None:
             self.load_embeddings()
@@ -176,19 +203,20 @@ class HybridVectorStore:
 
         results = []
         for idx in top_indices:
-            chunk = self.metadata["chunks"][idx]
+            chunk_data = self.metadata["chunks"][idx]
+            chunk = Chunk(**chunk_data)
             results.append(
-                {
-                    "doc_id": chunk["doc_id"],
-                    "title": chunk["title"],
-                    "section_path": chunk["section_path"],
-                    "content": chunk["content"],
-                    "similarity": float(similarities[idx]),
-                }
+                SearchResult(
+                    doc_id=chunk.doc_id,
+                    title=chunk.title,
+                    section_path=chunk.section_path,
+                    content=chunk.content,
+                    similarity=float(similarities[idx]),
+                )
             )
         return results
 
-    def get_document_chunks(self, doc_id: str) -> List[Dict]:
+    def get_document_chunks(self, doc_id: str) -> list[Chunk]:
         """Retrieves all chunks belonging to a specific document ID."""
         if self.metadata is None:
             self.load_embeddings()
@@ -196,7 +224,11 @@ class HybridVectorStore:
         if self.metadata is None:
             return []
 
-        return [c for c in self.metadata["chunks"] if c["doc_id"] == doc_id]
+        chunks = []
+        for chunk_data in self.metadata["chunks"]:
+            if chunk_data["doc_id"] == doc_id:
+                chunks.append(Chunk(**chunk_data))
+        return chunks
 
     def reconstruct_document(self, doc_id: str) -> str:
         """Reconstructs the original markdown document from its stored chunks."""
@@ -208,25 +240,25 @@ class HybridVectorStore:
             return ""
 
         rebuilt_lines = []
-        title = chunks[0]["title"]
+        title = chunks[0].title
         if title:
             rebuilt_lines.append(f"# {title}\n")
 
         for chunk in chunks:
-            path_parts = chunk["section_path"].split(" > ")
+            path_parts = chunk.section_path.split(" > ")
             # A level 2 heading for the first section, 3 for a nested one, etc.
             heading_level = len(path_parts) + 1
             if len(path_parts) > 0:
                 heading = path_parts[-1]
                 rebuilt_lines.append(f"{'#' * heading_level} {heading}")
-            rebuilt_lines.append(chunk["content"])
+            rebuilt_lines.append(chunk.content)
             rebuilt_lines.append("")  # Add a newline for separation
 
         return "\n".join(rebuilt_lines).strip()
 
     def load_documents_from_folder(
         self, folder_path: str = "vector-store/doc"
-    ) -> tuple[List[str], List[str]]:
+    ) -> Tuple[list[str], list[str]]:
         """
         Recursively loads all markdown files from a specified folder and its subfolders.
 
@@ -234,7 +266,7 @@ class HybridVectorStore:
             folder_path (str): Path to the folder containing markdown files. Defaults to "vector-store/doc".
 
         Returns:
-            tuple[List[str], List[str]]: A tuple containing (documents, document_ids)
+            tuple[list[str], list[str]]: A tuple containing (documents, document_ids)
         """
         documents = []
         doc_ids = []
@@ -267,11 +299,13 @@ class HybridVectorStore:
             except Exception as e:
                 print(f"Warning: Could not read file '{file_path}': {e}")
 
-        print(f"Loaded {len(documents)} documents from '{folder_path}' (including subfolders)")
+        print(
+            f"Loaded {len(documents)} documents from '{folder_path}' (including subfolders)"
+        )
         return documents, doc_ids
 
 
-def setup_from_folder_example():
+def setup_from_folder_example() -> HybridVectorStore:
     """Example of setting up the vector store from markdown files in the doc folder."""
     vector_store = HybridVectorStore()
 
@@ -293,16 +327,16 @@ if __name__ == "__main__":
 
         # Perform a search on the documents loaded from the folder
         print("\n--- Searching the vector store (from folder) ---")
-        query = "What are the symptoms of diabetes?"
-        results = vector.search(query, top_k=3)
+        query = "acne first line treatment"
+        results = vector.search(query, top_k=5)
 
         print(f"Query: '{query}'")
         print("Results:")
         for r in results:
             print(
-                f"- Document: {r['doc_id']}\n"
-                f"  Section: {r['title']} > {r['section_path']}\n"
-                f"  Content: '{r['content']}' (Similarity: {r['similarity']:.3f})\n"
+                f"- Document: {r.doc_id}\n"
+                f"  Section: {r.title} > {r.section_path}\n"
+                f"  Content: '{r.content}' (Similarity: {r.similarity:.3f})\n"
             )
 
     except FileNotFoundError as e:
