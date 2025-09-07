@@ -39,6 +39,10 @@ def chunk_markdown(md_text: str, doc_id: str) -> List[Dict]:
         content_buffer.clear()
 
     for line in lines:
+        # Check for line break and stop processing
+        if line.strip() == "---":
+            break  # Stop chunking entirely, don't include this line
+
         stripped_line = line.lstrip()
         # Check if the line is a valid heading.
         if stripped_line.startswith("#"):
@@ -220,73 +224,86 @@ class HybridVectorStore:
 
         return "\n".join(rebuilt_lines).strip()
 
+    def load_documents_from_folder(
+        self, folder_path: str = "vector-store/doc"
+    ) -> tuple[List[str], List[str]]:
+        """
+        Recursively loads all markdown files from a specified folder and its subfolders.
 
-# -------------------------------
-# Example Usage
-# -------------------------------
-def setup_example():
-    documents = [
-        """# Python Basics
-## Syntax
-Python uses indentation.
-### Indentation Rules
-4 spaces recommended.
-Yet there's some special consideration.
-#### Special Case
-Mixing tabs and spaces is bad.
-## Data Types
-Common types include int, str.
-""",
-        """# Machine Learning
-## Supervised Learning
-Learn from labeled data.
-### Regression
-Predict continuous values.
-### Classification
-Predict discrete categories.
-## Unsupervised Learning
-Discover hidden patterns.
-""",
-    ]
+        Args:
+            folder_path (str): Path to the folder containing markdown files. Defaults to "vector-store/doc".
 
+        Returns:
+            tuple[List[str], List[str]]: A tuple containing (documents, document_ids)
+        """
+        documents = []
+        doc_ids = []
+
+        if not os.path.exists(folder_path):
+            raise FileNotFoundError(f"Folder '{folder_path}' does not exist.")
+
+        # Recursively find all .md files in the folder and subfolders
+        md_files = []
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.endswith(".md"):
+                    md_files.append(os.path.join(root, file))
+
+        if not md_files:
+            print(f"No markdown files found in '{folder_path}' (including subfolders)")
+            return documents, doc_ids
+
+        for file_path in md_files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    documents.append(content)
+                    # Use relative path without extension as doc_id
+                    relative_path = os.path.relpath(file_path, folder_path)
+                    doc_id = os.path.splitext(relative_path)[0]
+                    # Replace path separators with underscores for doc_id
+                    doc_id = doc_id.replace(os.sep, "_")
+                    doc_ids.append(doc_id)
+            except Exception as e:
+                print(f"Warning: Could not read file '{file_path}': {e}")
+
+        print(f"Loaded {len(documents)} documents from '{folder_path}' (including subfolders)")
+        return documents, doc_ids
+
+
+def setup_from_folder_example():
+    """Example of setting up the vector store from markdown files in the doc folder."""
     vector_store = HybridVectorStore()
-    vector_store.precompute_embeddings(documents)
+
+    # Load documents from the doc folder
+    documents, doc_ids = vector_store.load_documents_from_folder()
+
+    # Process and save embeddings
+    vector_store.precompute_embeddings(documents, doc_ids)
     return vector_store
-
-
-def example_usage(vector_store):
-    print("\n--- Searching the vector store ---")
-    query = "predict categories from data"
-    results = vector_store.search(query, top_k=3)
-
-    print(f"Query: '{query}'")
-    print("Results:")
-    for r in results:
-        print(
-            f"- Title: {r['title']} > {r['section_path']}\n"
-            f"  Content: '{r['content']}' (Similarity: {r['similarity']:.3f})\n"
-        )
 
 
 if __name__ == "__main__":
     print("--- Setting up vector store ---")
-    # This will create and save the embeddings and metadata files
     try:
-        store = setup_example()
+        print("\n" + "=" * 50)
+        print("Loading documents from folder...")
+        setup_from_folder_example()
+        vector = HybridVectorStore()
 
-        # This will load the saved files and perform a search
-        example_usage(store)
+        # Perform a search on the documents loaded from the folder
+        print("\n--- Searching the vector store (from folder) ---")
+        query = "What are the symptoms of diabetes?"
+        results = vector.search(query, top_k=3)
 
-        # Example of getting all chunks for a document
-        print("\n--- Retrieving all chunks for 'Machine Learning' ---")
-        ml_chunks = store.get_document_chunks("doc_1")
-        for chunk in ml_chunks:
-            print(f"- {chunk['section_path']}")
-
-        # Example of reconstructing a document
-        print("\n--- Reconstructing 'Python Basics' document ---")
-        reconstructed_doc = store.reconstruct_document("doc_0")
-        print(reconstructed_doc)
+        print(f"Query: '{query}'")
+        print("Results:")
+        for r in results:
+            print(
+                f"- Document: {r['doc_id']}\n"
+                f"  Section: {r['title']} > {r['section_path']}\n"
+                f"  Content: '{r['content']}' (Similarity: {r['similarity']:.3f})\n"
+            )
 
     except FileNotFoundError as e:
         print(f"An error occurred: {e}")

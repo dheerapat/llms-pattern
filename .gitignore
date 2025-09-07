@@ -17,3 +17,6 @@ logs/
 
 vector-store/embeddings.pkl
 vector-store/metadata.json
+vector-store/doc/*
+
+applications/information-scraper/disease/*
