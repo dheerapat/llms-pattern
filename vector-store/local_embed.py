@@ -56,7 +56,7 @@ def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
 
     chunks = []
     current_title = ""
-    section_stack = []  # Tracks nested headings: [{"level": 1, "text": "Heading 1"}]
+    section_stack = []
     content_buffer = []
 
     def save_chunk():
