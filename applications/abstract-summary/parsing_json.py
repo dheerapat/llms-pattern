@@ -165,61 +165,168 @@ def classify(abstract_text: str) -> ClassificationResult:
 
 
 GET_KEYWORD_PROMPT = """
-You are a biomedical search specialist focused on generating optimal keywords for PubMed database searches in JSON format.
+You are a **biomedical search specialist** focused on generating **optimal PubMed keywords** in JSON format.
 
 ## Primary Function
-Convert user queries into a single, concise search keyword that maximizes relevant PubMed results when used with the `[Title/Abstract:~5]` proximity operator.
+
+Convert user queries — including **complex clinical vignettes** — into a list of concise, PubMed-optimized keywords for use with the `[Title/Abstract:~5]` proximity operator.
 
 ## Keyword Requirements
-- **Single string output**: Return exactly one keyword or phrase
-- **2-4 words maximum**: Keep it concise for effective proximity searching
-- **Medical terminology**: Use established biomedical terms when possible
-- **PubMed optimized**: Consider how terms appear in medical literature titles/abstracts
+
+* **List output**: Return a JSON object with `"keywords"` as a list.
+* **2-3 keywords**
+* **Distinct facets**: Each keyword should capture a unique aspect (disease, treatment, modifier, comorbidity, context).
+* **Medical terminology**: Prefer MeSH and standard biomedical language.
+* **PubMed optimized**: Use phrases likely to appear in titles/abstracts.
+
+---
 
 ## Optimization Strategy
 
 ### Query Analysis
-1. **Identify core medical concept** from user's question
-2. **Use precise terminology** (e.g., "myocardial infarction" vs "heart attack")
-3. **Consider search scope** - specific enough to be relevant, broad enough to return results
-4. **Account for proximity search** - terms should logically appear near each other in abstracts
+
+1. **Identify the primary disease/condition**.
+2. **Extract relevant modifiers** (comorbidities, allergies, severity, demographics if central).
+3. **Determine query focus** (treatment, diagnosis, prognosis, risk, prevention).
+4. **Discard irrelevant detail** (lab values, vitals, or unrelated context).
+5. **Generate multiple perspectives** (condition, context, intervention, risk).
 
 ### Keyword Selection Rules
-- **Primary concept first**: Most important medical term
-- **2-3 word phrases**: Work well with proximity operator (~5)
-- **Avoid stop words**: Exclude "and", "or", "the", "of" when possible
-- **Use established terms**: Prefer MeSH terminology and standard medical language
-- **Consider synonyms**: Choose the most commonly used variant in literature
 
-### Common Patterns
-- **Disease + Treatment**: "diabetes insulin"
-- **Procedure + Outcome**: "surgery complications" 
-- **Drug + Effect**: "aspirin cardioprotection"
-- **Condition + Risk**: "obesity cardiovascular"
+* **Short**.
+* **No stop words** (avoid "and", "or", "of").
+* **Established terms** (use “myocardial infarction” not “heart attack”).
+* **Prefer common PubMed usage** (e.g., “COPD”, “HIV”, “AIDS”).
+* **Distinct entries**: Do not combine unrelated concepts into a single keyword.
 
-## Examples
-| User Query | Optimal Keyword |
-|------------|-----------------|
-| "Side effects of statins on muscles" | "statin myopathy" |
-| "How effective is cognitive behavioral therapy for depression?" | "CBT depression" |
-| "Cancer treatment using immunotherapy" | "cancer immunotherapy" |
+---
+
+## Few-Shot Examples
+
+**Example 1**
+User Query:
+*"Side effects of statins on muscles"*
+
+Output:
+
+```json
+{
+  "keywords": [
+    "statin myopathy",
+    "statin adverse effects"
+  ]
+}
+```
+
+---
+
+**Example 2**
+User Query:
+*"How effective is cognitive behavioral therapy for depression?"*
+
+Output:
+
+```json
+{
+  "keywords": [
+    "CBT depression",
+    "cognitive therapy"
+  ]
+}
+```
+
+---
+
+**Example 3**
+User Query:
+*"Cancer treatment using immunotherapy"*
+
+Output:
+
+```json
+{
+  "keywords": [
+    "cancer immunotherapy",
+    "oncology immunotherapy"
+  ]
+}
+```
+
+---
+
+**Example 4**
+User Query:
+*"A patient with tuberculosis develops liver toxicity while on isoniazid. What are the management options?"*
+
+Output:
+
+```json
+{
+  "keywords": [
+    "tuberculosis treatment",
+    "isoniazid hepatotoxicity"
+  ]
+}
+```
+
+---
+
+**Example 5**
+User Query:
+*"An elderly smoker with COPD develops frequent exacerbations despite inhaler therapy. What additional treatments are available?"*
+
+Output:
+
+```json
+{
+  "keywords": [
+    "COPD exacerbation",
+    "elderly smoker",
+    "COPD treatment"
+  ]
+}
+```
+
+---
 
 ## Output Format
-Return only the keyword string - no explanation, quotes, or additional text.
+
+Return only JSON in this format:
+
+```json
+{
+  "keywords": [
+    "keyword1",
+    "keyword2",
+    ...,
+  ]
+}
+```
+
+---
 
 ## Quality Checks
-- Would this keyword appear in relevant PubMed titles/abstracts?
-- Is it specific enough to avoid irrelevant results?
-- Does it use terminology medical researchers would use?
-- Will the proximity operator (~5) work effectively with these terms?
+
+* Would each keyword likely appear in PubMed titles/abstracts?
+* Does each keyword capture a distinct aspect of the query?
+* Are terms concise, precise, and biomedical in nature?
+* Do they benefit from the `[Title/Abstract:~N]` proximity operator?
 
 Based on your analysis, provide your response in the following JSON formats:
-{"keyword": "keyword_string"}
+```json
+{
+  "keywords": [
+    "keyword1",
+    "keyword2",
+    ...,
+  ]
+}
+```
 """
 
 
 class KeywordResult(BaseModel):
-    keyword: str
+    keywords: list[str]
 
 
 def get_keyword(user_query: str):
@@ -267,4 +374,4 @@ if __name__ == "__main__":
     #         print(e.args)
 
     # test keyword extraction
-    print(get_keyword("Do Coenzyme Q10 provide any cardiovascular benefit?"))
+    print(get_keyword("Do CoQ10 supplements provide any cardiovascular benefits?"))

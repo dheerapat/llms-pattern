@@ -2,10 +2,15 @@ import os
 import json
 import pickle
 import numpy as np
-from typing import Optional, Tuple
-from sentence_transformers import SentenceTransformer
+from typing import Optional, Tuple, List
+from openai import OpenAI
 from sklearn.metrics.pairwise import cosine_similarity
 from pydantic import BaseModel
+import time
+from tqdm import tqdm
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # -------------------------------
@@ -31,6 +36,7 @@ class Metadata(BaseModel):
     embedding_dim: int
     num_chunks: int
     num_docs: int
+    embedding_model: str
 
 
 # -------------------------------
@@ -47,7 +53,7 @@ def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
 
     chunks = []
     current_title = ""
-    section_stack = []  # Tracks nested headings: [{"level": 1, "text": "Heading 1"}]
+    section_stack = []
     content_buffer = []
 
     def save_chunk():
@@ -104,24 +110,135 @@ def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
 
 
 # -------------------------------
-# Hybrid Vector Store
+# OpenAI Embedding Helper
+# -------------------------------
+class OpenAIEmbedder:
+    """Helper class to handle OpenAI embeddings with rate limiting and batching."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "text-embedding-3-small",
+        batch_size: int = 100,
+        rate_limit_delay: float = 0.1,
+    ):
+        """
+        Initialize OpenAI embedder.
+
+        Args:
+            api_key: OpenAI API key. If None, will use OPENAI_API_KEY env var.
+            model: Embedding model to use. Options: text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002
+            batch_size: Number of texts to embed in each API call (max 2048 for OpenAI)
+            rate_limit_delay: Delay between API calls to avoid rate limiting
+        """
+        self.client = OpenAI(api_key=api_key, base_url=os.getenv("EMBEDDING_URL", ""))
+        self.model = model
+        self.batch_size = min(batch_size, 2048)  # OpenAI's max batch size
+        self.rate_limit_delay = rate_limit_delay
+
+    def embed_texts(self, texts: List[str], show_progress: bool = True) -> np.ndarray:
+        """
+        Embed a list of texts using OpenAI's embedding API.
+
+        Args:
+            texts: List of texts to embed
+            show_progress: Whether to show progress bar
+
+        Returns:
+            numpy array of embeddings with shape (len(texts), embedding_dim)
+        """
+        if not texts:
+            return np.array([])
+
+        all_embeddings = []
+
+        # Process in batches
+        batches = [
+            texts[i : i + self.batch_size]
+            for i in range(0, len(texts), self.batch_size)
+        ]
+
+        iterator = tqdm(batches, desc="Embedding batches") if show_progress else batches
+
+        for batch in iterator:
+            try:
+                # Call OpenAI API
+                response = self.client.embeddings.create(
+                    model=self.model,
+                    input=batch,
+                    encoding_format="float",
+                    extra_body={"input_type": "query", "truncate": "NONE"},
+                )
+
+                # Extract embeddings from response
+                batch_embeddings = [item.embedding for item in response.data]
+                all_embeddings.extend(batch_embeddings)
+
+                # Rate limiting delay
+                if self.rate_limit_delay > 0:
+                    time.sleep(self.rate_limit_delay)
+
+            except Exception as e:
+                print(f"Error embedding batch: {e}")
+                raise
+
+        return np.array(all_embeddings)
+
+    def embed_single(self, text: str) -> np.ndarray:
+        """Embed a single text."""
+        try:
+            response = self.client.embeddings.create(
+                model=self.model,
+                input=[text],
+                encoding_format="float",
+                extra_body={"input_type": "query", "truncate": "NONE"},
+            )
+            return np.array(response.data[0].embedding)
+        except Exception as e:
+            print(f"Error embedding text: {e}")
+            raise
+
+
+# -------------------------------
+# Hybrid Vector Store with OpenAI
 # -------------------------------
 class HybridVectorStore:
     """
-    A simple file-based vector store for Markdown documents.
-    It chunks documents, embeds them using Sentence-BERT, and supports semantic search.
+    A simple file-based vector store for Markdown documents using OpenAI embeddings.
+    It chunks documents, embeds them using OpenAI's API, and supports semantic search.
     """
 
     def __init__(
         self,
         embeddings_file: str = "vector-store/embeddings.pkl",
         metadata_file: str = "vector-store/metadata.json",
+        openai_api_key=os.getenv("EMBEDDING_API_KEY", ""),
+        embedding_model: str = os.getenv("EMBEDDING_MODEL", ""),
+        batch_size: int = 100,
+        rate_limit_delay: float = 0.1,
     ) -> None:
+        """
+        Initialize the vector store.
+
+        Args:
+            embeddings_file: Path to store embeddings pickle file
+            metadata_file: Path to store metadata JSON file
+            openai_api_key: OpenAI API key (if None, uses OPENAI_API_KEY env var)
+            embedding_model: OpenAI embedding model to use
+            batch_size: Batch size for API calls
+            rate_limit_delay: Delay between API calls
+        """
         self.embeddings_file = embeddings_file
         self.metadata_file = metadata_file
         self.embeddings: Optional[np.ndarray] = None
         self.metadata: Optional[dict] = None
-        self.model = SentenceTransformer("ibm-granite/granite-embedding-english-r2")
+        self.embedder = OpenAIEmbedder(
+            api_key=openai_api_key,
+            model=embedding_model,
+            batch_size=batch_size,
+            rate_limit_delay=rate_limit_delay,
+        )
+        self.embedding_model = embedding_model
 
     def precompute_embeddings(
         self, documents: list[str], doc_ids: Optional[list[str]] = None
@@ -130,7 +247,7 @@ class HybridVectorStore:
         Processes and embeds a list of markdown documents and saves the results.
         If doc_ids are not provided, generic IDs will be created.
         """
-        print("Chunking and computing embeddings...")
+        print("Chunking documents...")
         all_chunks: list[Chunk] = []
         doc_ids = doc_ids or [f"doc_{i}" for i in range(len(documents))]
 
@@ -148,18 +265,27 @@ class HybridVectorStore:
                 "embedding_dim": 0,
                 "num_chunks": 0,
                 "num_docs": len(documents),
+                "embedding_model": self.embedding_model,
             }
         else:
+            print(f"Computing embeddings for {len(all_chunks)} chunks using OpenAI...")
+
             # Concatenate section path with content for embedding
             contents = [f"{c.section_path} {c.content}" for c in all_chunks]
-            self.embeddings = self.model.encode(contents, show_progress_bar=True)
+
+            # Use OpenAI to compute embeddings
+            self.embeddings = self.embedder.embed_texts(contents, show_progress=True)
 
             self.metadata = {
                 "chunks": [chunk.model_dump() for chunk in all_chunks],
                 "embedding_dim": self.embeddings.shape[1],
                 "num_chunks": len(all_chunks),
                 "num_docs": len(documents),
+                "embedding_model": self.embedding_model,
             }
+
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(self.embeddings_file), exist_ok=True)
 
         with open(self.embeddings_file, "wb") as f:
             pickle.dump(self.embeddings, f)
@@ -188,6 +314,9 @@ class HybridVectorStore:
             raise RuntimeError("Embeddings or metadata could not be loaded properly.")
 
         print(f"Loaded {self.metadata.get('num_chunks', 0)} chunks into memory.")
+        print(
+            f"Embedding model used: {self.metadata.get('embedding_model', 'unknown')}"
+        )
 
     def search(self, query: str, top_k: int = 5) -> list[SearchResult]:
         """Performs a semantic search for the most relevant chunks."""
@@ -195,9 +324,13 @@ class HybridVectorStore:
             self.load_embeddings()
 
         if self.embeddings is None or self.metadata is None:
-            raise RuntimeError("error")
+            raise RuntimeError("Failed to load embeddings or metadata.")
 
-        query_embedding = self.model.encode([query])
+        # Embed the query using OpenAI
+        print(f"Embedding query: '{query}'...")
+        query_embedding = self.embedder.embed_single(query).reshape(1, -1)
+
+        # Calculate similarities
         similarities = cosine_similarity(query_embedding, self.embeddings)[0]
         top_indices = np.argsort(similarities)[::-1][:top_k]
 
@@ -307,7 +440,18 @@ class HybridVectorStore:
 
 def setup_from_folder_example() -> HybridVectorStore:
     """Example of setting up the vector store from markdown files in the doc folder."""
-    vector_store = HybridVectorStore()
+    # Make sure to set your OpenAI API key
+    api_key = os.getenv("EMBEDDING_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "Please set your EMBEDDING_API_KEY environment variable or pass it to the constructor."
+        )
+
+    vector_store = HybridVectorStore(
+        openai_api_key=api_key,
+        batch_size=50,  # Conservative batch size
+        rate_limit_delay=0.2,  # 200ms delay between requests
+    )
 
     # Load documents from the doc folder
     documents, doc_ids = vector_store.load_documents_from_folder()
@@ -318,17 +462,16 @@ def setup_from_folder_example() -> HybridVectorStore:
 
 
 if __name__ == "__main__":
-    print("--- Setting up vector store ---")
+    print("--- Setting up OpenAI-based vector store ---")
     try:
         print("\n" + "=" * 50)
         print("Loading documents from folder...")
-        setup_from_folder_example()
-        vector = HybridVectorStore()
+        vector_store = setup_from_folder_example()
 
         # Perform a search on the documents loaded from the folder
-        print("\n--- Searching the vector store (from folder) ---")
-        query = "acne first line treatment"
-        results = vector.search(query, top_k=5)
+        print("\n--- Searching the vector store (OpenAI embeddings) ---")
+        query = "genital herpes management"
+        results = vector_store.search(query, top_k=5)
 
         print(f"Query: '{query}'")
         print("Results:")
@@ -336,10 +479,12 @@ if __name__ == "__main__":
             print(
                 f"- Document: {r.doc_id}\n"
                 f"  Section: {r.title} > {r.section_path}\n"
-                f"  Content: '{r.content}' (Similarity: {r.similarity:.3f})\n"
+                f"  Content: '{r.content[:200]}...' (Similarity: {r.similarity:.3f})\n"
             )
 
     except FileNotFoundError as e:
-        print(f"An error occurred: {e}")
-    except RuntimeError as e:
+        print(f"File error: {e}")
+    except ValueError as e:
+        print(f"Configuration error: {e}")
+    except Exception as e:
         print(f"An error occurred: {e}")
