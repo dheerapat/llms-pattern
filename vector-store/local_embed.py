@@ -8,9 +8,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from pydantic import BaseModel
 
 
-# ----------------
-# Pydantic Models
-# ----------------
 class Chunk(BaseModel):
     doc_id: str
     title: str
@@ -42,14 +39,7 @@ class SearchDocumentResult(BaseModel):
     query: str
 
 
-# -----------------
-# Markdown Chunker
-# -----------------
 def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
-    """
-    Chunks a markdown document into sections based on headings (# to ######).
-    Each chunk contains a section's content and its full hierarchical path.
-    """
     lines = md_text.strip().splitlines()
     if not lines:
         return []
@@ -60,7 +50,6 @@ def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
     content_buffer = []
 
     def save_chunk():
-        """Helper to flush the content buffer into a new chunk."""
         if not content_buffer or not section_stack:
             return
 
@@ -107,15 +96,7 @@ def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
     return chunks
 
 
-# ---------------------
-# Hybrid Vector Store
-# ---------------------
 class HybridVectorStore:
-    """
-    A simple file-based vector store for Markdown documents.
-    It chunks documents, embeds them using Sentence-BERT, and supports semantic search.
-    """
-
     def __init__(
         self,
         embeddings_file: str = "vector-store/embeddings.pkl",
@@ -130,10 +111,6 @@ class HybridVectorStore:
     def precompute_embeddings(
         self, documents: list[str], doc_ids: Optional[list[str]] = None
     ) -> None:
-        """
-        Processes and embeds a list of markdown documents and saves the results.
-        If doc_ids are not provided, generic IDs will be created.
-        """
         print("Chunking and computing embeddings...")
         all_chunks: list[Chunk] = []
         doc_ids = doc_ids or [f"doc_{i}" for i in range(len(documents))]
@@ -173,7 +150,6 @@ class HybridVectorStore:
         print(f"Saved {len(all_chunks)} chunks from {len(documents)} docs.")
 
     def load_embeddings(self) -> None:
-        """Loads pre-computed embeddings and metadata from disk into memory."""
         if not os.path.exists(self.embeddings_file) or not os.path.exists(
             self.metadata_file
         ):
@@ -193,7 +169,6 @@ class HybridVectorStore:
         print(f"Loaded {self.metadata.get('num_chunks', 0)} chunks into memory.")
 
     def search(self, query: str, top_k: int = 5) -> list[SearchResult]:
-        """Performs a semantic search for the most relevant chunks."""
         if self.embeddings is None or self.metadata is None:
             self.load_embeddings()
 
@@ -220,9 +195,6 @@ class HybridVectorStore:
         return results
 
     def search_document(self, query: str, top_k: int = 5) -> SearchDocumentResult:
-        """
-        Alternative method that returns a structured result using Pydantic model.
-        """
         if self.embeddings is None or self.metadata is None:
             self.load_embeddings()
 
@@ -274,7 +246,6 @@ class HybridVectorStore:
         )
 
     def get_document_chunks(self, doc_id: str) -> list[Chunk]:
-        """Retrieves all chunks belonging to a specific document ID."""
         if self.metadata is None:
             self.load_embeddings()
 
@@ -288,7 +259,6 @@ class HybridVectorStore:
         return chunks
 
     def reconstruct_document(self, doc_id: str) -> str:
-        """Reconstructs the original markdown document from its stored chunks."""
         if self.metadata is None:
             self.load_embeddings()
 
@@ -315,15 +285,6 @@ class HybridVectorStore:
     def load_documents_from_folder(
         self, folder_path: str = "vector-store/doc"
     ) -> Tuple[list[str], list[str]]:
-        """
-        Recursively loads all markdown files from a specified folder and its subfolders.
-
-        Args:
-            folder_path (str): Path to the folder containing markdown files. Defaults to "vector-store/doc".
-
-        Returns:
-            tuple[list[str], list[str]]: A tuple containing (documents, document_ids)
-        """
         documents = []
         doc_ids = []
 
@@ -359,11 +320,8 @@ class HybridVectorStore:
 
 
 def setup_from_folder_example() -> HybridVectorStore:
-    """Example of setting up the vector store from markdown files in the doc folder."""
     vector_store = HybridVectorStore()
-
     documents, doc_ids = vector_store.load_documents_from_folder()
-
     vector_store.precompute_embeddings(documents, doc_ids)
     return vector_store
 
