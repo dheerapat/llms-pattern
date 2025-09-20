@@ -130,5 +130,5 @@ def main(info: str, system_prompt: str):
 
 
 if __name__ == "__main__":
-    result = scrape("https://www.ncbi.nlm.nih.gov/books/NBK551517/")
-    main(result.document, MEDICAL_SYSTEM_PROMPT)
+    result = scrape("https://www.ncbi.nlm.nih.gov/books/NBK559281/")
+    main(result.document, DISEASE_SYSTEM_PROMPT)

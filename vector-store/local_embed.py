@@ -33,6 +33,15 @@ class Metadata(BaseModel):
     num_docs: int
 
 
+class SearchDocumentResult(BaseModel):
+    doc_id: str
+    full_document: str
+    frequency_in_top_k: int
+    max_similarity_score: float
+    was_tie_breaker: bool
+    query: str
+
+
 # -------------------------------
 # Markdown Chunker (no regex)
 # -------------------------------
@@ -121,9 +130,7 @@ class HybridVectorStore:
         self.metadata_file = metadata_file
         self.embeddings: Optional[np.ndarray] = None
         self.metadata: Optional[dict] = None
-        self.model = SentenceTransformer(
-            "sentence-transformers/embeddinggemma-300m-medical"
-        )
+        self.model = SentenceTransformer("ibm-granite/granite-embedding-english-r2")
 
     def precompute_embeddings(
         self, documents: list[str], doc_ids: Optional[list[str]] = None
@@ -217,6 +224,66 @@ class HybridVectorStore:
                 )
             )
         return results
+
+    def search_document(self, query: str, top_k: int = 5) -> SearchDocumentResult:
+        """
+        Alternative method that returns a structured result using Pydantic model.
+        """
+        if self.embeddings is None or self.metadata is None:
+            self.load_embeddings()
+
+        if self.embeddings is None or self.metadata is None:
+            raise RuntimeError("Embeddings or metadata could not be loaded properly.")
+
+        query_embedding = self.model.encode([query])
+        similarities = cosine_similarity(query_embedding, self.embeddings)[0]
+        top_indices = np.argsort(similarities)[::-1][:top_k]
+
+        # Count document frequencies and track max similarity per document
+        doc_frequencies = {}
+        doc_max_similarities = {}
+
+        for idx in top_indices:
+            chunk_data = self.metadata["chunks"][idx]
+            doc_id = chunk_data["doc_id"]
+            similarity = float(similarities[idx])
+            doc_frequencies[doc_id] = doc_frequencies.get(doc_id, 0) + 1
+
+            if (
+                doc_id not in doc_max_similarities
+                or similarity > doc_max_similarities[doc_id]
+            ):
+                doc_max_similarities[doc_id] = similarity
+
+        # Find the most frequent document(s)
+
+        max_frequency = max(doc_frequencies.values())
+        most_frequent_docs = [
+            doc_id for doc_id, freq in doc_frequencies.items() if freq == max_frequency
+        ]
+
+        # Determine if tie-breaker was needed
+        was_tie_breaker = len(most_frequent_docs) > 1
+
+        # Select document (by frequency first, then by similarity)
+        if was_tie_breaker:
+            selected_doc_id = max(
+                most_frequent_docs, key=lambda doc_id: doc_max_similarities[doc_id]
+            )
+        else:
+            selected_doc_id = most_frequent_docs[0]
+
+        # Reconstruct the full document
+        full_document = self.reconstruct_document(selected_doc_id)
+
+        return SearchDocumentResult(
+            doc_id=selected_doc_id,
+            full_document=full_document,
+            frequency_in_top_k=doc_frequencies[selected_doc_id],
+            max_similarity_score=doc_max_similarities[selected_doc_id],
+            was_tie_breaker=was_tie_breaker,
+            query=query,
+        )
 
     def get_document_chunks(self, doc_id: str) -> list[Chunk]:
         """Retrieves all chunks belonging to a specific document ID."""
@@ -329,17 +396,12 @@ if __name__ == "__main__":
 
         # Perform a search on the documents loaded from the folder
         print("\n--- Searching the vector store (from folder) ---")
-        query = "acne first line treatment"
-        results = vector.search(query, top_k=5)
+        query = "avoid medication g6pd"
+        results = vector.search_document(query, top_k=5)
 
         print(f"Query: '{query}'")
         print("Results:")
-        for r in results:
-            print(
-                f"- Document: {r.doc_id}\n"
-                f"  Section: {r.title} > {r.section_path}\n"
-                f"  Content: '{r.content}' (Similarity: {r.similarity:.3f})\n"
-            )
+        print(results)
 
     except FileNotFoundError as e:
         print(f"An error occurred: {e}")
