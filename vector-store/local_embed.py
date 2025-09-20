@@ -8,9 +8,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from pydantic import BaseModel
 
 
-# -------------------------------
+# ----------------
 # Pydantic Models
-# -------------------------------
+# ----------------
 class Chunk(BaseModel):
     doc_id: str
     title: str
@@ -42,9 +42,9 @@ class SearchDocumentResult(BaseModel):
     query: str
 
 
-# -------------------------------
-# Markdown Chunker (no regex)
-# -------------------------------
+# -----------------
+# Markdown Chunker
+# -----------------
 def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
     """
     Chunks a markdown document into sections based on headings (# to ######).
@@ -74,12 +74,10 @@ def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
         content_buffer.clear()
 
     for line in lines:
-        # Check for line break and stop processing
         if line.strip() == "---":
-            break  # Stop chunking entirely, don't include this line
+            break
 
         stripped_line = line.lstrip()
-        # Check if the line is a valid heading.
         if stripped_line.startswith("#"):
             level = 0
             while level < len(stripped_line) and stripped_line[level] == "#":
@@ -91,30 +89,27 @@ def chunk_markdown(md_text: str, doc_id: str) -> list[Chunk]:
                 and stripped_line[level] == " "
             ):
                 heading_text = stripped_line[level + 1 :].strip()
-                save_chunk()  # Save content from the previous section
+                save_chunk()
 
                 if level == 1:
-                    # Top-level heading becomes the document title
                     current_title = heading_text
                     section_stack.clear()
                 else:
-                    # Pop deeper headings to match the new heading's level
                     while section_stack and section_stack[-1]["level"] >= level:
                         section_stack.pop()
                     section_stack.append({"level": level, "text": heading_text})
-                continue  # Skip adding the heading line to content
+                continue
 
-        # Normal content line
         content_buffer.append(line)
 
-    save_chunk()  # Flush the very last chunk
+    save_chunk()
 
     return chunks
 
 
-# -------------------------------
+# ---------------------
 # Hybrid Vector Store
-# -------------------------------
+# ---------------------
 class HybridVectorStore:
     """
     A simple file-based vector store for Markdown documents.
@@ -159,7 +154,6 @@ class HybridVectorStore:
                 "num_docs": len(documents),
             }
         else:
-            # Concatenate section path with content for embedding
             contents = [f"{c.section_path} {c.content}" for c in all_chunks]
             self.embeddings = self.model.encode(contents, show_progress_bar=True)
 
@@ -239,7 +233,6 @@ class HybridVectorStore:
         similarities = cosine_similarity(query_embedding, self.embeddings)[0]
         top_indices = np.argsort(similarities)[::-1][:top_k]
 
-        # Count document frequencies and track max similarity per document
         doc_frequencies = {}
         doc_max_similarities = {}
 
@@ -255,17 +248,13 @@ class HybridVectorStore:
             ):
                 doc_max_similarities[doc_id] = similarity
 
-        # Find the most frequent document(s)
-
         max_frequency = max(doc_frequencies.values())
         most_frequent_docs = [
             doc_id for doc_id, freq in doc_frequencies.items() if freq == max_frequency
         ]
 
-        # Determine if tie-breaker was needed
         was_tie_breaker = len(most_frequent_docs) > 1
 
-        # Select document (by frequency first, then by similarity)
         if was_tie_breaker:
             selected_doc_id = max(
                 most_frequent_docs, key=lambda doc_id: doc_max_similarities[doc_id]
@@ -273,7 +262,6 @@ class HybridVectorStore:
         else:
             selected_doc_id = most_frequent_docs[0]
 
-        # Reconstruct the full document
         full_document = self.reconstruct_document(selected_doc_id)
 
         return SearchDocumentResult(
@@ -315,13 +303,12 @@ class HybridVectorStore:
 
         for chunk in chunks:
             path_parts = chunk.section_path.split(" > ")
-            # A level 2 heading for the first section, 3 for a nested one, etc.
             heading_level = len(path_parts) + 1
             if len(path_parts) > 0:
                 heading = path_parts[-1]
                 rebuilt_lines.append(f"{'#' * heading_level} {heading}")
             rebuilt_lines.append(chunk.content)
-            rebuilt_lines.append("")  # Add a newline for separation
+            rebuilt_lines.append("")
 
         return "\n".join(rebuilt_lines).strip()
 
@@ -343,7 +330,6 @@ class HybridVectorStore:
         if not os.path.exists(folder_path):
             raise FileNotFoundError(f"Folder '{folder_path}' does not exist.")
 
-        # Recursively find all .md files in the folder and subfolders
         md_files = []
         for root, _, files in os.walk(folder_path):
             for file in files:
@@ -359,10 +345,8 @@ class HybridVectorStore:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     documents.append(content)
-                    # Use relative path without extension as doc_id
                     relative_path = os.path.relpath(file_path, folder_path)
                     doc_id = os.path.splitext(relative_path)[0]
-                    # Replace path separators with underscores for doc_id
                     doc_id = doc_id.replace(os.sep, "_")
                     doc_ids.append(doc_id)
             except Exception as e:
@@ -378,10 +362,8 @@ def setup_from_folder_example() -> HybridVectorStore:
     """Example of setting up the vector store from markdown files in the doc folder."""
     vector_store = HybridVectorStore()
 
-    # Load documents from the doc folder
     documents, doc_ids = vector_store.load_documents_from_folder()
 
-    # Process and save embeddings
     vector_store.precompute_embeddings(documents, doc_ids)
     return vector_store
 
@@ -394,7 +376,6 @@ if __name__ == "__main__":
         setup_from_folder_example()
         vector = HybridVectorStore()
 
-        # Perform a search on the documents loaded from the folder
         print("\n--- Searching the vector store (from folder) ---")
         query = "avoid medication g6pd"
         results = vector.search_document(query, top_k=5)
