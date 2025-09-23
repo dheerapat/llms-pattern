@@ -5,8 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "bentoml>=1.4.19",
     "inspect-ai>=0.3.115",
     "markitdown[pdf]>=0.1.2",
+    "numpy>=2.3.0",
     "openai>=1.85.0",
     "pymupdf>=1.26.1",
     "python-dotenv>=1.1.0",
@@ -14,4 +16,5 @@ dependencies = [
     "sentence-transformers>=5.1.0",
     "transformers>=4.52.4",
     "typer>=0.16.0",
+    "voyager>=2.1.0",
 ]

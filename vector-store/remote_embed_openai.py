@@ -13,6 +13,7 @@ from markdown_chunker import chunk_markdown, Chunk
 
 load_dotenv()
 
+
 class SearchResult(BaseModel):
     doc_id: str
     title: str
