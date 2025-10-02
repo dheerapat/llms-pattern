@@ -16,9 +16,9 @@ def main(
     ] = False,
 ):
     keyword = get_keyword(query)
-    print(f"searching pubmed database with following keyword: '{keyword.keyword}'")
+    print(f"searching pubmed database with following keyword: '{keyword.keywords}'")
 
-    journals = search_journal(keyword=keyword.keyword)
+    journals = search_journal(keyword=keyword.keywords)
     ids = ", ".join(journals.esearchresult.idlist)
 
     abs = get_abstract(ids, "xml")
