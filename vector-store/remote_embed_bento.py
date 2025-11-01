@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from markdown_chunker import chunk_markdown, Chunk
+from markdown_chunker import Chunk
 
 
 class SearchResult(BaseModel):
