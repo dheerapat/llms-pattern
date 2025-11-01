@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "bentoml>=1.4.19",
+    "intersystems-irispython>=5.3.0",
     "markitdown[pdf]>=0.1.2",
     "numpy>=2.3.0",
     "openai>=1.85.0",
